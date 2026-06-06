@@ -9,3 +9,5 @@ data/input.txt
 data/qa_data.json
 data/hallu_*.jsonl
 .venv/
+RESUME.md
+UNDER_THE_HOOD.md

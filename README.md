@@ -22,8 +22,7 @@ collapse the shortcut and prove the model learned real signal.
 The underlying 12M model also **beats GPT-2 (124M) by 14% on in-domain
 bits-per-byte**, trained in ~5 min on one RTX 4070.
 
-→ **How it all works: [UNDER_THE_HOOD.md](UNDER_THE_HOOD.md)** · **Full
-results: [REPORT.md](REPORT.md)** · **Résumé bullets: [RESUME.md](RESUME.md)**
+→ **Full method and results: [REPORT.md](REPORT.md)**
 
 ## Pipeline
 
