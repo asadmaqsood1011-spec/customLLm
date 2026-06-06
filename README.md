@@ -1,17 +1,29 @@
-# GPT From Scratch
+# GPT From Scratch → HalluGuard
 
-A decoder-only language model built from first principles in PyTorch and taken
-through the **entire modern LLM lifecycle** — tokenizer, pretraining,
-supervised fine-tuning, and preference alignment (DPO) — plus a live demo. No
-`transformers`, no pretrained weights. PyTorch supplies tensors, autograd and
-CUDA; the architecture and every training/alignment algorithm are written by
-hand so the math is visible.
+A decoder-only LLM built from first principles in PyTorch and taken through the
+**entire modern lifecycle** — tokenizer, pretraining, SFT, DPO — then re-headed
+into **HalluGuard**, a hallucination detector that solves a real problem:
+**flagging when an AI answer isn't supported by its source.** No `transformers`,
+no pretrained weights — every layer hand-built.
 
-A **12M-parameter** model trained on a single RTX 4070 in minutes, that
-**beats GPT-2 (124M) by 14% on in-domain bits-per-byte** and demonstrably
-improves at instruction-following through SFT and DPO.
+**HalluGuard** runs as a guardrail on *every* LLM response, so it's tiny, local
+and free where a GPT-4 check is slow and paid:
 
-→ **Full results and method: [REPORT.md](REPORT.md)**
+| | result |
+|---|---|
+| accuracy / AUROC (length-controlled HaluEval) | **93.5% / 0.97** |
+| latency / cost / privacy | **~2 ms/check · $0 · fully local** |
+| vs GPT-4 guardrail | ~0.5–1.5 s, per-call fee, data leaves device |
+
+It also **catches a benchmark artifact**: a claim-length heuristic alone scores
+0.98 AUROC on raw HaluEval, so the project builds length-controlled splits that
+collapse the shortcut and prove the model learned real signal.
+
+The underlying 12M model also **beats GPT-2 (124M) by 14% on in-domain
+bits-per-byte**, trained in ~5 min on one RTX 4070.
+
+→ **How it all works: [UNDER_THE_HOOD.md](UNDER_THE_HOOD.md)** · **Full
+results: [REPORT.md](REPORT.md)** · **Résumé bullets: [RESUME.md](RESUME.md)**
 
 ## Pipeline
 
@@ -63,6 +75,15 @@ python dpo.py             # DPO align        -> out/dpo.pt
 python eval.py            # base vs SFT vs DPO metrics
 python benchmark.py --gpt2
 python app.py             # live demo at http://127.0.0.1:7860
+```
+
+Train **HalluGuard** (the hallucination detector):
+
+```bash
+python prepare_halueval.py   # download HaluEval, build labeled (source, claim) pairs
+python make_controlled.py    # length-controlled splits (remove the artifact)
+python train_cls.py --tag ctrl_ --out out/halluguard_ctrl.pt   # fine-tune detector
+python eval_cls.py  --tag ctrl_ --ckpt out/halluguard_ctrl.pt  # accuracy/F1/AUROC + baselines
 ```
 
 Generate from the CLI:

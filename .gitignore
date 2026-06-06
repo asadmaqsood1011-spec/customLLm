@@ -5,5 +5,7 @@ data/*.bin
 data/corpus.txt
 data/tokenizer.json
 data/dpo_pairs.jsonl
-.venv/
 data/input.txt
+data/qa_data.json
+data/hallu_*.jsonl
+.venv/

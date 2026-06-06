@@ -118,7 +118,39 @@ SFT ~doubles instruction-following over base; DPO improves it further **and**
 recovers the response diversity SFT had traded away (both were in DPO's
 reward). Monotonic improvement on the targeted metrics.
 
-## 7. Honest limitations
+## 7. HalluGuard — faithfulness detector (`classifier.py`, `train_cls.py`)
+
+The model is re-headed into a **classifier** (drop the LM head, attach a 2-class
+head on the last token's hidden state) to solve a real problem: **detect when an
+LLM answer is unsupported by its source** (faithfulness — feasible at 12M;
+world-factuality is not). Trained on **HaluEval-QA** (`knowledge+question` →
+`right_answer`=supported / `hallucinated_answer`=hallucinated).
+
+**Benchmark artifact found and corrected.** A first run scored 98% — but a naive
+**claim-length** heuristic alone scores **0.976 AUROC**: HaluEval's fake answers
+are simply longer. We built **length-controlled** splits (per-class length
+distributions matched), which collapses the cue. Honest results on the
+controlled test set:
+
+| | accuracy | F1 | AUROC |
+|---|---|---|---|
+| **HalluGuard (12M)** | **0.935** | **0.935** | **0.973** |
+| claim-length cue (was 0.976) | — | — | 0.731 |
+| lexical-overlap cue | — | — | 0.871 |
+
+The length shortcut is neutralized yet the model holds 0.97 AUROC → it learned
+real signal. (Lexical overlap staying predictive is legitimate — missing source
+words genuinely indicate unfaithfulness.)
+
+**Cost story (per-response guardrail):** ~**2 ms/check, $0, fully local** vs a
+GPT-4 check at ~0.5–1.5 s + per-call fee + data leaving the device.
+
+**Ablation:** classifier from random init (0.914 val) ≈ from pretrained backbone
+(0.909 val) — TinyStories pretraining gave no significant lift here (domain
+mismatch with QA text); the task is learnable at this scale either way.
+In-domain pretraining is the obvious next improvement.
+
+## 8. Honest limitations
 
 - 12M params on 60 MB is tiny. Absolute instruction-following (0.33 hit-rate)
   is modest — the value here is the **techniques implemented correctly with

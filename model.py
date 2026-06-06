@@ -210,6 +210,16 @@ class GPT(nn.Module):
         x = self.norm_f(x)
         return self.head(x), presents
 
+    def features(self, idx):
+        """Final hidden states (B, T, C) — backbone output before the LM head.
+        Used to attach a classification head for downstream tasks."""
+        B, T = idx.shape
+        x = self.drop(self.tok_emb(idx))
+        cos, sin = self.rope_cos[:T], self.rope_sin[:T]
+        for block in self.blocks:
+            x, _ = block(x, cos, sin)
+        return self.norm_f(x)
+
     def forward(self, idx, targets=None):
         logits, _ = self._forward(idx)
         loss = None
