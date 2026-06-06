@@ -61,7 +61,37 @@ python generate.py --prompt "ROMEO:" --max_new_tokens 500
 | vocab (BPE)  | 4096  |
 | precision    | bf16  |
 
-~10M parameters. Tune via flags, e.g. `python train.py --n_layer 8 --n_embd 512`.
+~12M parameters. Tune via flags, e.g. `python train.py --n_layer 8 --n_embd 512`.
+
+## Benchmarks
+
+```bash
+python benchmark.py            # perplexity + throughput + MFU
+python benchmark.py --gpt2     # + fair bits-per-byte comparison vs GPT-2
+```
+
+Measured on a single **RTX 4070** (bf16), 12M-param model, ~150s training:
+
+| metric                     | value          | notes |
+|----------------------------|----------------|-------|
+| val perplexity             | 81.9           | per token, our 4096-vocab BPE |
+| bits-per-byte (held-out)   | 2.04           | tokenizer-independent |
+| training throughput        | ~205k tok/s    | fwd+bwd |
+| MFU                        | ~29%           | hand-written attention, no flash-attn |
+
+**Fair comparison vs pretrained GPT-2 (124M)**, bits-per-byte on the same
+held-out text (lower = better):
+
+| model                          | bits-per-byte |
+|--------------------------------|---------------|
+| GPT-2 124M (general)           | **1.86**      |
+| ours 12M (Shakespeare)         | 2.04          |
+
+bits-per-byte is used because perplexity isn't comparable across different
+tokenizers. The 12M model trails GPT-2 by ~9% — it overfits 1 MB of text
+(train loss keeps dropping while val loss rises), so best-checkpoint early
+stopping is used. Closing the gap is a regularization/data-scale exercise, not
+an architecture one.
 
 ## Why this project
 
