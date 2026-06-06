@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 out/
 data/*.bin
-data/input.txt
+data/corpus.txt
 data/tokenizer.json
+data/dpo_pairs.jsonl
 .venv/
+data/input.txt

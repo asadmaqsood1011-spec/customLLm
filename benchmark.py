@@ -120,7 +120,7 @@ def main():
     nats, n_tok = eval_nats(ours_logits, val_ids, cfg.block_size, device)
     ppl = math.exp(nats / n_tok)
     bpb = nats / n_bytes / LN2
-    print("== Quality (held-out Shakespeare) ==")
+    print("== Quality (held-out val) ==")
     print(f"  val tokens     : {n_tok:,}  ({n_bytes:,} bytes)")
     print(f"  perplexity     : {ppl:.2f}   (per token, our {cfg.vocab_size}-vocab BPE)")
     print(f"  bits-per-byte  : {bpb:.4f}\n")
@@ -152,7 +152,7 @@ def main():
         g_nats, g_tok = eval_nats(gpt2_logits, g_ids, 1024, device)
         g_bpb = g_nats / n_bytes / LN2
         print(f"  GPT-2 (124M, general)   bits-per-byte: {g_bpb:.4f}")
-        print(f"  ours  ({model.num_params()/1e6:.0f}M, Shakespeare) bits-per-byte: {bpb:.4f}")
+        print(f"  ours  ({model.num_params()/1e6:.0f}M, in-domain) bits-per-byte: {bpb:.4f}")
         better = "ours WINS" if bpb < g_bpb else "GPT-2 wins"
         print(f"  -> {better} on in-domain text "
               f"({abs(g_bpb-bpb)/max(g_bpb,bpb)*100:.0f}% gap)")

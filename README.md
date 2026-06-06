@@ -1,101 +1,95 @@
 # GPT From Scratch
 
-A small GPT-style language model implemented from first principles in PyTorch —
-including a byte-level BPE tokenizer, the transformer architecture, and the full
-training loop. No `transformers`, no pretrained weights. PyTorch supplies only
-tensors, autograd, and CUDA; the model is written by hand so every piece of the
-math is visible.
+A decoder-only language model built from first principles in PyTorch and taken
+through the **entire modern LLM lifecycle** — tokenizer, pretraining,
+supervised fine-tuning, and preference alignment (DPO) — plus a live demo. No
+`transformers`, no pretrained weights. PyTorch supplies tensors, autograd and
+CUDA; the architecture and every training/alignment algorithm are written by
+hand so the math is visible.
 
-Trains on [TinyShakespeare](https://github.com/karpathy/char-rnn) and generates
-Shakespeare-like text in a few minutes on a single consumer GPU.
+A **12M-parameter** model trained on a single RTX 4070 in minutes, that
+**beats GPT-2 (124M) by 14% on in-domain bits-per-byte** and demonstrably
+improves at instruction-following through SFT and DPO.
 
-## What's implemented
+→ **Full results and method: [REPORT.md](REPORT.md)**
 
-- **Byte-level BPE tokenizer** (`bpe.py`) — the same merge-based algorithm GPT-2/4
-  use, trained from raw UTF-8 bytes. Train / encode / decode / save / load.
-- **Decoder-only transformer** (`model.py`) — token + learned positional
-  embeddings, multi-head **causal self-attention** with the scaled dot-product
-  math written out explicitly, pre-norm residual blocks, GELU MLP, weight tying,
-  GPT-2-style scaled initialization.
-- **Training loop** (`train.py`) — AdamW, linear warmup + cosine LR decay,
-  gradient clipping, mixed-precision (bf16) autocast, `memmap` data loading,
-  periodic eval, best-checkpoint saving, optional `torch.compile`.
-- **Sampling** (`generate.py`) — autoregressive generation with temperature and
-  top-k.
-
-## Architecture
+## Pipeline
 
 ```
-tokens ─▶ token emb + positional emb
-            │
-            ▼
-      ┌──────────────┐   ×N blocks
-      │  LayerNorm    │
-      │  Causal MHSA  │──▶ + residual
-      │  LayerNorm    │
-      │  MLP (4x,GELU)│──▶ + residual
-      └──────────────┘
-            │
-            ▼
-      LayerNorm ─▶ Linear head (tied) ─▶ logits ─▶ softmax
+ BPE tokenizer ─▶ Pretrain (TinyStories) ─▶ SFT (instruction tune) ─▶ DPO (align) ─▶ Demo
+   bpe.py            train.py                   sft.py                  dpo.py        app.py
 ```
+
+## What's implemented from scratch
+
+- **Byte-level BPE tokenizer** (`bpe.py`) — merge-based, regex pre-split, word
+  de-dup for speed, special-token support for the chat format.
+- **Modern transformer** (`model.py`) — **RoPE** rotary positions, **RMSNorm**,
+  **SwiGLU** FFN, **grouped-query attention (GQA)**, **KV-cache** decoding,
+  weight tying. Attention/RoPE/norm math written out explicitly.
+- **Pretraining** (`train.py`) — AdamW, warmup + cosine LR, grad clip, bf16
+  autocast, memmap loading, best-checkpoint saving.
+- **Supervised fine-tuning** (`sft.py`) — chat template with **prompt loss
+  masking** (train on responses only).
+- **DPO** (`dpo.py`) — Direct Preference Optimization from the loss equation,
+  with a frozen reference model.
+- **Eval + benchmark** (`eval.py`, `benchmark.py`) — instruction-following
+  metrics across stages, perplexity, throughput/MFU, and a tokenizer-fair
+  bits-per-byte comparison vs pretrained GPT-2.
+- **Live demo** (`app.py`) — Gradio chat UI; type a few words, the model writes
+  a story.
+
+## Headline results (RTX 4070, 12M params)
+
+| metric | result |
+|---|---|
+| val perplexity (TinyStories) | 7.84 |
+| bits-per-byte vs **GPT-2 124M** | **0.737 vs 0.857 — ours wins by 14%** |
+| instruction word hit-rate (base → SFT → DPO) | 0.13 → 0.24 → **0.33** |
+| DPO preference accuracy | 0.62 → **1.00** |
+| training throughput / MFU | 152k tok/s / 21% |
 
 ## Quickstart
 
 ```bash
 pip install -r requirements.txt
 
-python data.py        # download + tokenize TinyShakespeare
-python train.py       # train (RTX 4070: ~few min for a clean sample)
-python generate.py --prompt "ROMEO:" --max_new_tokens 500
+python data.py            # download TinyStories, train BPE, tokenize
+python train.py           # pretrain         -> out/ckpt.pt
+python sft.py             # instruction tune -> out/sft.pt
+python prepare_dpo.py     # build preference pairs
+python dpo.py             # DPO align        -> out/dpo.pt
+
+python eval.py            # base vs SFT vs DPO metrics
+python benchmark.py --gpt2
+python app.py             # live demo at http://127.0.0.1:7860
 ```
+
+Generate from the CLI:
+
+```bash
+python generate.py --prompt "Once upon a time" --max_new_tokens 200
+```
+
+## Deploy the demo (Hugging Face Spaces)
+
+1. Create a Space → SDK **Gradio**.
+2. Push this repo plus `out/dpo.pt` and `data/tokenizer.json` (and `app.py`,
+   `model.py`, `bpe.py`, `chat.py`, `infer.py`).
+3. The Space runs `app.py` automatically. CPU tier is fine (12M model).
 
 ## Default config
 
-| param        | value |
-|--------------|-------|
-| layers       | 6     |
-| heads        | 6     |
-| embedding    | 384   |
-| context      | 256   |
-| vocab (BPE)  | 4096  |
-| precision    | bf16  |
+| layers | heads | kv-heads | embed | context | vocab | precision |
+|--------|-------|----------|-------|---------|-------|-----------|
+| 6      | 6     | 6        | 384   | 256     | 4099  | bf16      |
 
-~12M parameters. Tune via flags, e.g. `python train.py --n_layer 8 --n_embd 512`.
-
-## Benchmarks
-
-```bash
-python benchmark.py            # perplexity + throughput + MFU
-python benchmark.py --gpt2     # + fair bits-per-byte comparison vs GPT-2
-```
-
-Measured on a single **RTX 4070** (bf16), 12M-param model, ~150s training:
-
-| metric                     | value          | notes |
-|----------------------------|----------------|-------|
-| val perplexity             | 81.9           | per token, our 4096-vocab BPE |
-| bits-per-byte (held-out)   | 2.04           | tokenizer-independent |
-| training throughput        | ~205k tok/s    | fwd+bwd |
-| MFU                        | ~29%           | hand-written attention, no flash-attn |
-
-**Fair comparison vs pretrained GPT-2 (124M)**, bits-per-byte on the same
-held-out text (lower = better):
-
-| model                          | bits-per-byte |
-|--------------------------------|---------------|
-| GPT-2 124M (general)           | **1.86**      |
-| ours 12M (Shakespeare)         | 2.04          |
-
-bits-per-byte is used because perplexity isn't comparable across different
-tokenizers. The 12M model trails GPT-2 by ~9% — it overfits 1 MB of text
-(train loss keeps dropping while val loss rises), so best-checkpoint early
-stopping is used. Closing the gap is a regularization/data-scale exercise, not
-an architecture one.
+Tune via flags, e.g. `python train.py --n_layer 8 --n_embd 512`.
 
 ## Why this project
 
-Building a transformer end-to-end — tokenizer through training loop — rather than
-calling a library, to understand exactly how modern LLMs work: how text becomes
-tokens, how attention mixes information across a sequence, and how the model is
-optimized.
+To understand exactly how modern LLMs work — not by calling an API, but by
+implementing the whole stack: how text becomes tokens, how RoPE/attention mix
+information, how a base model is pretrained, then aligned to follow
+instructions via SFT and DPO, and how to measure each step honestly. See
+[REPORT.md](REPORT.md) for the full write-up and limitations.

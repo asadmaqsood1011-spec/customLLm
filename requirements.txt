@@ -1,3 +1,6 @@
 torch>=2.2
 numpy
 tqdm
+gradio>=4.0
+# optional: only for `benchmark.py --gpt2` (loads pretrained GPT-2 to compare)
+# transformers
