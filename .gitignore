@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+out/
+data/*.bin
+data/input.txt
+data/tokenizer.json
+.venv/
