@@ -6,7 +6,7 @@ data/corpus.txt
 data/tokenizer.json
 data/dpo_pairs.jsonl
 data/input.txt
-data/qa_data.json
+data/*_data.json
 data/hallu_*.jsonl
 .venv/
 RESUME.md
