@@ -4,3 +4,8 @@ tqdm
 gradio>=4.0
 # optional: only for `benchmark.py --gpt2` (loads pretrained GPT-2 to compare)
 # transformers
+# optional: only for the guard.py HTTP service (`uvicorn guard:app`)
+# fastapi
+# uvicorn
+# optional: tests
+# pytest
