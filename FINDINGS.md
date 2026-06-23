@@ -32,6 +32,18 @@ Every benchmark is gameable by claim length. The worst is `qa`, where **claim le
 
 Length control fully neutralizes the cue on summarization and dialogue (AUROC ~0.50). On QA it drops sharply but a residual remains, and a second cue appears: novel-word fraction (claim words missing from the source). That one is partly legitimate, since missing source words genuinely signal unfaithfulness, so we neutralize the clearly-spurious length cue and report what the detector does against the rest.
 
+## Does the detector beat the shortcuts?
+
+HalluGuard (12M params, from scratch) trained and tested on the length-controlled splits, next to the best trivial cue that survives control. The detector only earns credit where it clears the cues.
+
+| benchmark | detector AUROC | detector acc | best surviving cue |
+|---|---|---|---|
+| qa | 0.977 | 0.948 | novel-word fraction 0.871 |
+| summ | 1.000 | 1.000 | novel-word fraction 0.760 |
+| dial | 0.875 | 0.779 | source length (chars) 0.443 |
+
+The cleanest test is `dial`, where every trivial cue is already ~0.50, so there is no shortcut left to ride. The detector still scores 0.875 AUROC there, which is the honest evidence that it learned real faithfulness signal rather than an artifact. Where cues survive (QA length and lexical overlap), the high scores are partly those cues, and we say so.
+
 ## Takeaway
 
 Reported accuracy on these benchmarks is inflated by claim length. Any honest result should either control for it or report the length-cue baseline alongside the model. The length-controlled splits are built by `make_controlled.py` and the detector is evaluated on them in `eval_cls.py`.

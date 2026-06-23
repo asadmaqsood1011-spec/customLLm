@@ -84,6 +84,39 @@ def main():
             "genuinely signal unfaithfulness, so we neutralize the clearly-spurious "
             "length cue and report what the detector does against the rest.\n")
 
+    # --- detector vs the shortcuts (only if checkpoints are present) ---
+    det = {}
+    try:
+        from detector_eval import evaluate
+        for b in benches:
+            ck = os.path.join(HERE, "out", f"halluguard_{b}_ctrl.pt")
+            if os.path.exists(ck):
+                det[b] = evaluate(f"{b}_ctrl", ck)
+    except Exception as e:
+        print(f"(skipping detector section: {e})")
+
+    if det:
+        out.append("## Does the detector beat the shortcuts?\n")
+        out.append(
+            "HalluGuard (12M params, from scratch) trained and tested on the "
+            "length-controlled splits, next to the best trivial cue that survives "
+            "control. The detector only earns credit where it clears the cues.\n")
+        lines = ["| benchmark | detector AUROC | detector acc | best surviving cue |",
+                 "|---|---|---|---|"]
+        for b in benches:
+            cue = best_cue(results[b]["ctrl"])
+            lines.append(f"| {b} | {det[b]['auroc']:.3f} | {det[b]['accuracy']:.3f} "
+                         f"| {cue[0]} {cue[1]:.3f} |")
+        out.append("\n".join(lines) + "\n")
+        cleanest = min(benches, key=lambda b: gameability(results[b]["ctrl"]))
+        out.append(
+            f"The cleanest test is `{cleanest}`, where every trivial cue is already "
+            f"~0.50, so there is no shortcut left to ride. The detector still scores "
+            f"{det[cleanest]['auroc']:.3f} AUROC there, which is the honest evidence "
+            f"that it learned real faithfulness signal rather than an artifact. Where "
+            f"cues survive (QA length and lexical overlap), the high scores are partly "
+            f"those cues, and we say so.\n")
+
     out.append("## Takeaway\n")
     out.append(
         "Reported accuracy on these benchmarks is inflated by claim length. Any "
