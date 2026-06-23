@@ -91,6 +91,20 @@ Generate from the CLI:
 python generate.py --prompt "Once upon a time" --max_new_tokens 200
 ```
 
+## Tests
+
+A small pytest suite covers the parts most likely to break silently:
+
+- `tests/test_bpe.py` checks encode/decode roundtrips (ASCII, unicode and emoji),
+  special-token splicing, and save/load.
+- `tests/test_model.py` checks output shapes, causal masking, grouped-query
+  attention, and that cached decoding matches a full forward pass token for token.
+
+```bash
+pip install pytest
+pytest -q
+```
+
 ## Deploy the demo (Hugging Face Spaces)
 
 1. Create a Space → SDK **Gradio**.
