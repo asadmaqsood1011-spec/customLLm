@@ -12,13 +12,18 @@ from guard import Guard
 
 guard = Guard.load()
 
+# Real HaluEval-style examples (Question + Knowledge source -> short answer),
+# the distribution HalluGuard was trained on. The first is faithful, the second
+# contradicts the source.
 EXAMPLES = [
-    ["The Eiffel Tower is in Paris, France and was completed in 1889.",
-     "The Eiffel Tower was completed in 1889."],
-    ["The Eiffel Tower is in Paris, France and was completed in 1889.",
-     "The Eiffel Tower is located in Berlin, Germany."],
-    ["Python is a programming language created by Guido van Rossum in 1991.",
-     "Python was created by Guido van Rossum and first released in 1991."],
+    ['Question: Where was the group that released the song "What Would You Say" '
+     'formed?\nKnowledge: "What Would You Say" is a song by American rock group '
+     'Dave Matthews Band. Dave Matthews Band is an American rock band that was '
+     'formed in Charlottesville, Virginia in 1991.',
+     "Charlottesville, Virginia"],
+    ["Question: What genus does Pleioblastus belong to?\nKnowledge: Pleioblastus "
+     "is an East Asian genus of monopodial bamboos in the grass family Poaceae.",
+     "Pleioblastus belongs to a family of flowering plants, not grasses."],
 ]
 
 
@@ -42,7 +47,10 @@ with gr.Blocks(title="HalluGuard") as demo:
         "# HalluGuard\n"
         "A 12M-parameter faithfulness detector built from scratch. It flags when "
         "an answer is not supported by its source. Runs locally in a couple of "
-        "milliseconds, no API call.")
+        "milliseconds, no API call.\n\n"
+        "Trained on HaluEval-style data, so it is calibrated for a `Question:` + "
+        "`Knowledge:` source with a short answer. Try the examples below; far "
+        "out-of-distribution text is a known limitation at this size.")
     source = gr.Textbox(label="Source (what the model was given)", lines=5)
     answer = gr.Textbox(label="Answer (what the model produced)", lines=3)
     btn = gr.Button("Check faithfulness", variant="primary")

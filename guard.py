@@ -105,7 +105,15 @@ except ImportError:
 
 
 if __name__ == "__main__":
+    # Real HaluEval test examples (the distribution the detector was trained on).
     g = Guard.load()
-    src = "The Eiffel Tower is in Paris and was completed in 1889."
-    for claim in ["It was completed in 1889.", "It is located in Berlin."]:
-        print(claim, "->", g.check(src, claim))
+    supported_src = ("Question: Where was Dave Matthews Band formed?\nKnowledge: "
+                     "Dave Matthews Band is an American rock band that was formed "
+                     "in Charlottesville, Virginia in 1991.")
+    hallucinated_src = ("Question: What genus does Pleioblastus belong to?\n"
+                        "Knowledge: Pleioblastus is an East Asian genus of "
+                        "monopodial bamboos in the grass family Poaceae.")
+    print("supported ex   ->", g.check(supported_src, "Charlottesville, Virginia"))
+    print("hallucinated ex->", g.check(
+        hallucinated_src, "Pleioblastus belongs to a family of flowering plants, "
+        "not grasses."))
