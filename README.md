@@ -85,6 +85,25 @@ python train_cls.py --tag ctrl_ --out out/halluguard_ctrl.pt   # fine-tune detec
 python eval_cls.py  --tag ctrl_ --ckpt out/halluguard_ctrl.pt  # accuracy/F1/AUROC + baselines
 ```
 
+Audit the benchmarks for shortcuts, then run HalluGuard as a guardrail:
+
+```bash
+python prepare_benchmarks.py   # download 3 source-grounded HaluEval subsets
+python shortcuts.py            # AUROC of model-free cues per benchmark
+python make_controlled.py      # length-matched splits that kill the cue
+python audit_report.py         # write FINDINGS.md from the measured numbers
+
+python guard.py                # one-shot demo of the check(source, claim) API
+python guard_app.py            # Gradio demo: paste a source + an answer
+```
+
+A faithfulness benchmark should test whether a claim is supported by its source.
+`shortcuts.py` shows all three HaluEval subsets leak the label through claim
+length (a model that just counts characters scores up to 0.98 AUROC on QA).
+`make_controlled.py` matches the per-class length distribution so that cue dies,
+and the detector is re-evaluated on the honest splits. Full write-up in
+[FINDINGS.md](FINDINGS.md).
+
 Generate from the CLI:
 
 ```bash
